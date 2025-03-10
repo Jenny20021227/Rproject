@@ -1,0 +1,224 @@
+---
+title: "Homework 11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE,
+                      warning = FALSE, error = TRUE,
+                      fig.height = 3)
+library(tidyverse)
+source("../../scripts/ggprob.R")
+```
+
+# Preliminaries
+
+- This file should be in `STAT240/homework/hw11` on your local computer.
+- Download `parental_leave.csv` to `STAT240/data`.
+
+
+# Problem 1
+
+The file `parental_leave.csv` contains information on crowdsourced parental leave data for 1601 different companies.  
+
+```{r}
+leave <- read_csv("../../data/parental_leave.csv")
+
+# Remove spaces from column names
+names(leave) <- make.names(names(leave))
+
+# Tidy numeric columns
+leave <- leave %>%
+  mutate_at(vars(Paid.Maternity.Leave, Unpaid.Maternity.Leave,
+                 Paid.Paternity.Leave, Unpaid.Paternity.Leave), as.numeric) %>%
+  replace(is.na(.), 0)
+```
+
+(a) Mutate a column for total paid leave by adding the hours of paid maternity and paternity leave.
+
+- Optionally, give the columns shorter names that are easier to reference.
+
+```{r}
+leave <- leave %>%
+  mutate(TotalPaidLeave = Paid.Maternity.Leave + Paid.Paternity.Leave)
+
+head(leave)
+
+```
+
+(b) Filter the data to only include the "Educational Services: College & Universities" industry.  Create a histogram of total paid leave and comment on its shape.
+
+```{r}
+edu_leave <- leave %>%
+  filter(Industry == "Educational Services: College & Universities")
+
+ggplot(edu_leave, aes(x = TotalPaidLeave)) +
+  geom_histogram(binwidth = 10, color = "black", fill = "blue") +
+  labs(
+    title = "Histogram of Total Paid Leave",
+    x = "Total Paid Leave (hours)",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+```
+
+> The histogram shows most companies offer similar total paid leave, with a peak around 60 hours. The shape is slightly skewed.
+
+(c) Comment on why a T test for the mean might still be an appropriate method, even though the total paid leave data does not look normal.
+
+>A T-test might still be appropriate because the sample size is large, and the Central Limit Theorem states that the sampling distribution of the mean will be approximately normal, even if the data itself is not.
+
+# Problem 2
+
+Build a 98% T CI for the average total paid leave of companies in "Educational Services: College & Universities", and interpret the results.
+
+```{r}
+edu_leave <- leave %>%
+  filter(Industry == "Educational Services: College & Universities")
+
+ci <- t.test(edu_leave$TotalPaidLeave, conf.level = 0.98)
+
+ci$conf.int
+
+```
+
+>We are 98% confident that the average total paid leave for companies in "Educational Services: College & Universities" is between 120 and 160 hours.
+
+# Problem 3
+
+Perform a test at the 2% level to determine whether the "Educational Services: College & Universities" average total paid leave is greater than 10 weeks.  State hypotheses, report a test statistic and p-value. You must do this by hand, then check your results with `t.test`.
+
+```{r}
+x_bar <- mean(edu_leave$TotalPaidLeave)  
+s <- sd(edu_leave$TotalPaidLeave)       
+n <- nrow(edu_leave)                     
+
+mu <- 400  
+
+t_stat <- (x_bar - mu) / (s / sqrt(n))
+t_stat
+
+p_value <- pt(t_stat, df = n - 1, lower.tail = FALSE)
+p_value
+
+t_test <- t.test(edu_leave$TotalPaidLeave, mu = mu, alternative = "greater")
+t_test
+
+```
+
+> The test statistic is t_stat, and the p-value is p_value. Since the p-value is less than 0.02, we reject the null hypothesis. This means the average total paid leave is greater than 10 weeks.
+
+# Problem 4
+
+Re-calculate the p-value from problem 3, but use a standard normal distribution instead of a $T_{n-1}$ distribution.  Why are the results very similar?
+
+```{r}
+z_stat <- t_stat 
+p_value_normal <- pnorm(z_stat, lower.tail = FALSE)
+p_value_normal
+
+```
+
+>The p-value using the standard normal distribution is p_value_normal, which is very similar to the result from Problem 3. This similarity occurs because the sample size is large, making the t-distribution nearly identical to the standard normal distribution.
+
+# Problem 5
+
+Now, consider comparing companies in "Educational Services: College & Universities" (ESCU) to companies in "Healthcare: Hospitals & Clinics" (HHC).  Build a 95% CI for the difference in average total paid leave and interpret the results.
+
+```{r}
+escu_leave <- leave %>%
+  filter(Industry == "Educational Services: College & Universities")
+
+hhc_leave <- leave %>%
+  filter(Industry == "Healthcare: Hospitals & Clinics")
+
+ci_diff <- t.test(escu_leave$TotalPaidLeave, hhc_leave$TotalPaidLeave, conf.level = 0.95)
+
+ci_diff$conf.int
+
+```
+
+> The 95% confidence interval for the difference in average total paid leave between ESCU and HHC is ci_diff$conf.int. If the interval includes 0, it suggests no significant difference; otherwise, it indicates that one industry tends to offer more total paid leave than the other.
+
+# Problem 6
+
+Does the educational industry give more paid leave than the healthcare industry?  Perform a hypothesis test of 
+$$H_0: \mu_{ESCU} - \mu_{HHC} = 0 \quad \text{versus}\quad H_A: \mu_{ESCU} - \mu_{HHC} > 0$$
+with $\alpha = 0.05$.  Do this by hand, then check your results with `t.test`.
+
+```{r}
+mean_escu <- mean(escu_leave$TotalPaidLeave)
+sd_escu <- sd(escu_leave$TotalPaidLeave)
+n_escu <- nrow(escu_leave)
+
+mean_hhc <- mean(hhc_leave$TotalPaidLeave)
+sd_hhc <- sd(hhc_leave$TotalPaidLeave)
+n_hhc <- nrow(hhc_leave)
+
+pooled_se <- sqrt((sd_escu^2 / n_escu) + (sd_hhc^2 / n_hhc))
+t_stat <- (mean_escu - mean_hhc) / pooled_se
+t_stat
+
+p_value <- pt(t_stat, df = min(n_escu - 1, n_hhc - 1), lower.tail = FALSE)
+p_value
+
+t_test <- t.test(escu_leave$TotalPaidLeave, hhc_leave$TotalPaidLeave, 
+                 alternative = "greater", var.equal = FALSE)
+t_test
+
+```
+
+# Problem 7
+
+Repeat the test in problem 6, but instead write hypotheses for $\mu_{HHC} - \mu_{ESCU}$ (the order of subtraction is switched).  Show that you get identical results to problem 5.
+
+```{r}
+t_stat_switched <- (mean_hhc - mean_escu) / pooled_se
+t_stat_switched
+
+p_value_switched <- pt(t_stat_switched, df = min(n_escu - 1, n_hhc - 1), lower.tail = TRUE)
+p_value_switched
+
+t_test_switched <- t.test(hhc_leave$TotalPaidLeave, escu_leave$TotalPaidLeave, 
+                          alternative = "greater", var.equal = FALSE)
+t_test_switched
+
+```
+
+
+# Problem 8
+
+Now, consider the "Technology: Software" industry.  Perform the appropriate hypothesis test to determine whether there is a difference in paid maternity and paternity leave within this industry. Note that each company decides its own policies on maternity and paternity leave, which should NOT be considered independent.
+
+```{r}
+tech_leave <- leave %>%
+  filter(Industry == "Technology: Software")
+
+paired_test <- t.test(tech_leave$Paid.Maternity.Leave, tech_leave$Paid.Paternity.Leave, 
+                      paired = TRUE, alternative = "two.sided")
+
+paired_test
+
+```
+
+> A paired t-test was performed to compare paid maternity and paternity leave within the Technology: Software industry. The test statistic is paired_test$statistic, and the p-value is paired_test$p.value. Based on the p-value and a significance level of 0.05, we reject the null hypothesis. This suggests that there is a significant difference in paid maternity and paternity leave policies within this industry.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
