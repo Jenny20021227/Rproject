@@ -1,0 +1,126 @@
+---
+title: "Discussion 12"
+output: html_document
+---
+
+# Preliminaries
+
+-   This file should be in `STAT240/discussion/ds12` on your local computer.
+
+-   This assignment should be completed in your **assigned Canvas groups**. Only one person has to submit on behalf of the group. You may submit whatever you have at the end of discussion section for full credit.
+
+-   This assignment is to be completed in the first 10-20 mins of the discussion session. The rest of the discussion time the students are to work on the group projects with their discussion groups.
+
+# Present Group Members
+
+Please **write the names of the present group members** here.
+
+> Present Group Members: Avery Dunham, Vibha Nair, Rowan Tichelaar
+
+> Absent Group Members: Jenny Kim
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      error = TRUE, 
+                      warning = FALSE, 
+                      message = FALSE)
+library(tidyverse)
+```
+
+## Problems
+
+The questions in this discussion assignment use the boston marathon data set. The data set `bm_sample` contains a random sample of 100 men and 100 women, between the age of 35-39, who ran in and completed the 2010 Boston Marathon. Times are listed in minutes.
+
+```{r}
+# This code is provided for you
+bm_sample = read_csv("../../data/bm_sample.csv")
+spec(bm_sample)
+```
+
+### Problem 1
+
+Create and display a table with a numerical summary of the data.
+Calculate the sample size, mean time, standard deviation of the times, and standard error of the mean ($s/\sqrt{n}$) separately for each sex. This table will have one row for each sex.
+
+```{r}
+bm_summary <- bm_sample %>%
+  group_by(Sex) %>%
+  summarise(
+    n = n(),
+    mean_time = mean(Time),
+    sd_time = sd(Time),
+    se_mean = sd_time / sqrt(n)
+  )
+
+bm_summary
+```
+
+### Problem 2
+
+Construct 95% confidence intervals for each sex seperately for the mean time to complete the 2010 Boston Marathon among all competitors of that sex aged 35-39.
+
+
+```{r}
+bm_conf_int <- bm_sample %>%
+  group_by(Sex) %>%
+  summarise(
+    n = n(),
+    mean_time = mean(Time),
+    sd_time = sd(Time),
+    se_mean = sd_time / sqrt(n),
+    t_critical = qt(0.975, df = n - 1),
+    margin_error = t_critical * se_mean,
+    ci_lower = mean_time - margin_error,
+    ci_upper = mean_time + margin_error
+  )
+bm_conf_int %>%
+  select(Sex, mean_time, ci_lower, ci_upper)
+```
+
+
+### Problem 3
+
+**Part (a)** Perform hypothesis test at 10% significance level for the difference of mean or the two - sample `t.test()` for the mean time to complete the 2010 Boston Marathon for male is less than that for female participants. Write down all the steps of the hypothesis test.
+
+```{r}
+alpha <- 0.10
+
+t_test_result <- t.test(Time ~ Sex, data = bm_sample,
+                        alternative = "less",
+                        var.equal = FALSE)
+
+t_statistic <- t_test_result$statistic
+degrees_freedom <- t_test_result$parameter
+p_value <- t_test_result$p.value
+
+results <- list(
+  t_statistic = t_statistic,
+  degrees_of_freedom = degrees_freedom,
+  p_value = p_value
+)
+results
+
+if (p_value < alpha) {
+  decision <- "Reject the null hypothesis"
+  conclusion <- "There is sufficient evidence to conclude that the mean marathon time for males is less than that for females among participants aged 35-39."
+} else {
+  decision <- "Fail to reject the null hypothesis"
+  conclusion <- "There is not sufficient evidence to conclude that the mean marathon time for males is less than that for females among participants aged 35-39."
+}
+
+list(
+  decision = decision,
+  conclusion = conclusion
+)
+
+```
+
+
+**Part (b)** Can you support the conclusion made for the hypothesis test based on the confidence interval obtained in the Step 4 and 5?
+
+> Yes, the conclusion from the hypothesis test is supported by the confidence intervals obtained in Problem 2. The 95% confidence intervals for males ([209.91, 218.85] minutes) and females ([231.33, 240.96] minutes) do not overlap, indicating a significant difference. Therefore, the confidence intervals support the conclusion that males have a lower mean marathon time than females among participants aged 35-39.
+
+
+
+
+
