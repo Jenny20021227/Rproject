@@ -1,0 +1,315 @@
+---
+title: "Homework 6"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE,
+                      warning = FALSE, error = TRUE,
+                      fig.height = 3)
+library(tidyverse)
+source("../../scripts/ggprob.R")
+```
+
+# Preliminaries
+
+- This file should be in `STAT240/homework/hw06` on your local computer.
+
+# Problem 1
+
+For each of the following questions, say whether the random variable is reasonably approximated by a binomial random variable or not, and explain your answer. If the variable is binomial, identify $n$ the number of trials and $p$ the probability of success.  If it is not binomial, identify which of the "BINS" assumptions is violated.
+
+(a) A fair die is rolled until a 1 appears, and $X$ denotes the number of rolls.
+
+> The random variable $X$ is not a binomial random variable because the number of trials isn't fixed. In this case, you keep rolling the die until you get a 1, so you don't know ahead of time how many rolls it will take. This situation fits better with a geometric random variable rather than a binomial one.
+
+(b) Twenty of the different Badger basketball players each attempt 1 free throw and $X$ is the total number of successful attempts.
+
+> (b) The random variable $X$ can be reasonably approximated by a binomial random variable. Here, there are 20 trials (each basketball player shooting one free throw), so $n = 20$. Assuming each player has the same probability of making a free throw, say $p$, and each shot is independent of the others, $X$ counts the number of successes (made free throws) out of these 20 trials. Thus, $X$ fits the criteria for a binomial distribution.
+
+(c) A die is rolled 50 times. Let $X$ be the face that lands up most often.
+
+> The random variable $X$ is not a binomial random variable because it does not count the number of successes out of a series of trials. Instead, $X$ identifies which die face appears the most often, which isn't a matter of success or failure for a specific outcome. Therefore, it doesn't fit the binomial model where we look for the number of times a specific result (like getting a '1' on a die) happens.
+
+(d) In a bag of 10 batteries, I know 2 are old. Let $X$ be the number of old batteries I choose when taking a sample of 4 to put into my calculator.
+
+> The random variable $X$ is not a binomial random variable. This scenario involves drawing from a finite population without replacement, so the trials are not independent (each draw affects the probability of subsequent draws). In this case, $X$ counts how many old batteries are chosen from the bag, where the probabilities change with each draw. The correct distribution to use here is the hypergeometric distribution, not the binomial distribution, because the probability of selecting an old battery changes as batteries are removed from the bag.
+
+(e) It is reported that 20% of Madison homeowners have installed a home security system. Let $X$ be the number of homes without home security systems installed in a random sample of 100 houses in the Madison city limits.
+
+>The random variable $X$ is a binomial random variable. There are 100 houses being checked (100 trials), and each house either has a security system or doesn't (two possible outcomes). The probability of finding a house without a security system is 80% (since 20% have systems, so 100% - 20% = 80%). Therefore, $X$, which counts houses without systems, fits a binomial model with n=100 trials and𝑝=0.80 p=0.80 probability of success (a house without a system).
+
+# Problem 2
+
+Create a data frame with the following columns.
+Each row corresponds to a single $\text{Binom}(n, p)$ distribution. The first two columns are the parameters of the distribution.
+
+- `n`, which is always equal to 100
+- `p`, which ranges from 0 to 1 by 0.01 $(0, 0.01, 0.02, \ldots , 0.99, 1)$
+- `mu`, the mean
+- `sigma`, the standard deviation
+- `q90`, the 0.9 quantile (or 90th percentile)
+
+```{r}
+library(dplyr)
+library(purrr)
+
+p_values <- seq(0, 1, by = 0.01)
+
+n <- 100
+
+binom_df <- tibble(
+  n = rep(n, length(p_values)),  
+  p = p_values,              
+  mu = n * p_values,             
+  sigma = sqrt(n * p_values * (1 - p_values)),  
+  q90 = map2_dbl(n, p_values, ~qbinom(0.9, .x, .y))  
+)
+
+print(binom_df)
+
+```
+
+Create two separate line plots of the following:
+- `sigma` versus `p` (y and x axes, respectively)
+- `q90` versus `p`
+
+
+```{r}
+library(ggplot2)
+
+ggplot(binom_df, aes(x = p, y = sigma)) + 
+  geom_line() + 
+  labs(title = "Standard Deviation vs. Probability of Success",
+       x = "Probability of Success (p)",
+       y = "Standard Deviation (sigma)") 
+  theme_minimal()
+
+```
+
+```{r}
+# Plot for q90 versus p
+ggplot(binom_df, aes(x = p, y = q90)) +
+  geom_line(color = "blue") + 
+  labs(title = "90th Percentile vs. Probability of Success",
+       x = "Probability of Success (p)",
+       y = "90th Percentile (q90)") +
+  theme_minimal()
+
+```
+
+How does the standard deviation change with $p$?
+
+> The standard deviation of a binomial distribution increases as the probability of success moves from 0 to 0.5 and decreases from 0.5 to 1. It is highest when the probability of success is 0.5.
+
+Comment on the relationship between the 90th percentile and $p$.
+
+> The 90th percentile of a binomial distribution goes up as the probability of success increases. This means the higher the chance of success, the higher the value at which 90% of outcomes are below.
+
+# Problem 3
+
+The random variable $X$ has the $\text{Binom}(100, 0.2)$ distribution.
+  
+- Find an integer $a$ so that $P(X \le a) \ge 0.5$ and $P(X \ge a) \ge 0.5$.
+- Show the values of $a$, $P(X \le a)$, and $P(X \ge a)$.
+
+```{r}
+library(stats)
+
+
+n <- 100
+p <- 0.2
+
+
+a <- qbinom(0.5, n, p)
+
+
+p_le_a <- pbinom(a, n, p)
+p_ge_a <- 1 - pbinom(a - 1, n, p)  
+
+
+data.frame(
+  a = a,
+  P_X_le_a = p_le_a,
+  P_X_ge_a = p_ge_a
+)
+
+```
+
+
+
+# Problem 4
+
+A student decided to guess randomly on their True/False quiz.  The number of questions they answer correctly is $\text{Binom}(10, 0.5)$.  Write code with `dbinom`, `pbinom`, or `qbinom` to calculate that value or probability.
+
+- "I know I must have gotten at least one question right!"
+
+```{r}
+
+n <- 10  
+p <- 0.5  
+
+prob_at_least_one_right <- 1 - pbinom(0, n, p)
+
+
+prob_at_least_one_right
+
+```
+
+- "I probably got 3 - 5 of the questions right."
+
+```{r}
+
+n <- 10  
+p <- 0.5
+
+prob_3_to_5_right <- pbinom(5, n, p) - pbinom(2, n, p)
+
+prob_3_to_5_right
+
+```
+
+- "I feel lucky.  The answers I picked are better than 90% of my other attempts!" (How many questions did they get right on this quiz attempt?)
+
+```{r}
+n <- 10  
+p <- 0.5 
+
+
+num_correct_better_than_90_percent <- qbinom(0.90, n, p)
+
+num_correct_better_than_90_percent
+
+```
+
+Explain why the 90th percentile is not 9. 
+
+> The 90th percentile is not 9 because in a symmetric binomial distribution with a mean of 5, you don't need to score as high as 9 to be in the top 10%. The results are clustered around the middle, not the extremes.
+
+
+# Problem 5
+
+Match the four binomial distributions given below to the appropriate graph in `p5_choices.png`. Two of the distributions will not be used. Briefly justify your choices.
+
+- Binom(12, 0.5)
+
+> For the Binom(12,0.5) distribution, select the graph in p5_choices.png that is symmetric with the peak at 6 and covers outcomes from 0 to 12. This aligns with the mean and the range of a binomial distribution where each trial has a 50% chance of success.
+
+- Binom(12, 0.6)
+
+> For the Binom(12,0.6) distribution, choose the graph in p5_choices.png that is slightly skewed to the right with the peak around 7 or 8. This graph should display outcomes from 0 to 12, aligning with a binomial distribution where each trial has a 60% chance of success.
+
+- Binom(10, 0.1)
+
+> For the Binom(10,0.1) distribution, choose the graph in p5_choices.png that is heavily skewed towards lower outcomes, peaking at or near 0 or 1. This graph should display outcomes from 0 to 10, fitting a binomial distribution where each trial has only a 10% chance of success.
+
+- Binom(10, 0.3)
+
+> For the Binom(10,0.3) distribution, choose the graph in p5_choices.png that shows a moderate skew towards lower numbers, with the peak around 3. This graph should cover outcomes from 0 to 10, corresponding to a binomial distribution where each trial has a 30% chance of success.
+
+
+# Problem 6
+
+Are the following statements true for Binomial distributions, Normal distributions, or both?
+
+- This distribution is always symmetric.
+
+> The statement "This distribution is always symmetric" applies to Normal distributions, which are inherently symmetric. It does not always apply to Binomial distributions, which are only symmetric when p=0.5.
+
+- If you know the two parameters of this distribution, you can calculate its mean, any probability, or any quantile.
+
+> The statement applies to both Binomial and Normal distributions. Knowing the two parameters of either distribution allows calculation of the mean, probabilities, and quantiles.
+
+- If $\mu$ is the mean of the distribution, then the probability distribution graphically reaches its maximum at $\mu$.
+
+> Replace this text with your response.
+
+- If $\mu$ is the mean of the distribution, then it is possible for the probability of getting exactly $\mu$ on a random draw to be 0.
+
+> The statement is true for Normal distributions. For Binomial distributions, it’s true only when p=0.5; otherwise, the peak may not be at the mean.
+
+# Problem 7
+
+Use `pnorm` to find the probabilities highlighted below on a N(0, 1) curve.
+
+```{r, echo = F}
+gnorm(0, 1) +
+  geom_norm_fill(0, 1, b = -1, fill = "dodgerblue") +
+  geom_vline(xintercept = -1) +
+  annotate("text", x = -1.5, y = .35, label = "x = -1")
+```
+
+```{r}
+prob_left_of_minus_1 <- pnorm(-1, mean = 0, sd = 1)
+
+prob_left_of_minus_1
+
+```
+
+```{r, echo = F}
+gnorm(0, 1) +
+  geom_norm_fill(0, 1, a = 1, fill = "dodgerblue") +
+  geom_vline(xintercept = 1) +
+  annotate("text", x = 1.5, y = .35, label = "x = 1")
+```
+
+```{r}
+prob_right_of_1 <- 1 - pnorm(1, mean = 0, sd = 1)
+
+prob_right_of_1
+
+```
+
+```{r, echo = F}
+gnorm(0, 1) +
+  geom_norm_fill(0, 1, a = 0.5, b = 2, fill = "dodgerblue") +
+  geom_vline(xintercept = 0.5) +
+  geom_vline(xintercept = 2) +
+  annotate("text", x = 1.1, y = .35, label = "x = 0.5") +
+  annotate("text", x = 2.5, y = .35, label = "x = 2")
+```
+
+```{r}
+prob_between_0_5_and_2 <- pnorm(2, mean = 0, sd = 1) - pnorm(0.5, mean = 0, sd = 1)
+
+prob_between_0_5_and_2
+
+```
+
+```{r, echo = F}
+gnorm(0, 1) +
+  geom_norm_fill(0, 1, b = -0.75, fill = "dodgerblue") +
+    geom_norm_fill(0, 1, a = 0.75, fill = "dodgerblue") +
+  geom_vline(xintercept = -0.75) +
+  geom_vline(xintercept = 0.75) +
+  annotate("text", x = -1.5, y = .35, label = "x = -0.75") +
+  annotate("text", x = 1.5, y = .35, label = "x = 0.75")
+```
+
+```{r}
+prob_between <- pnorm(0.75, mean = 0, sd = 1) - pnorm(-0.75, mean = 0, sd = 1)
+
+prob_outside <- 1 - prob_between
+
+prob_outside
+
+```
+
+
+# Problem 8
+
+Let $X_1$ and $X_2$ be two draws from $X ~ N(10, 4)$. Order the five events below based on which events are least to most likely to occur.
+
+- Event A: $X_1$ > 15
+- Event B: $X_1$ = 15
+- Event C: $X_1$ < 15
+- Event D: $X_1$ > 15 AND $X_2$ > 15
+- Event E: $X_1$ > $X_2$
+
+> EventB
+EventD
+EventA
+EventE
+EventC
+
+
