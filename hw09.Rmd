@@ -1,0 +1,274 @@
+---
+title: "Homework 9"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE,
+                      warning = FALSE, error = TRUE,
+                      fig.height = 3)
+library(tidyverse)
+```
+
+# Preliminaries
+
+- This file should be in `STAT240/homework/hw09` on your local computer.
+- Download `happiness_2019.csv` and `dc_weather.csv` to `STAT240/data`.
+
+
+# Problem 1
+
+A one-sided hypothesis test of 
+
+$$H_A: \beta_1 > 0$$
+
+is performed on a linear model.  The p-value of this test is 0.035.  What would be the p-value if the same data was used to test the following alternatives?
+
+**(a)** $$H_A: \beta_1 < 0$$
+
+> p-value=1−0.035=0.965
+
+**(b)** $$H_A: \beta_1 \neq 0$$
+
+> p-value=2×0.035=0.07
+
+
+# Problem 2
+
+Continue working with the happiness index vs GDP of countries model from Homework 8.
+
+```{r}
+happiness <- read_csv("../../data/happiness_2019.csv")
+
+# Remove spaces from column names
+names(happiness) <- make.names(names(happiness))
+
+happiness_mod <- lm(Score ~ GDP.per.capita, data = happiness)
+```
+
+Build and interpret a 98% CI for the true slope of the linear relationship between happiness index and GDP.  Does the interval cover 0?
+
+```{r}
+library(readr)
+library(broom)
+
+happiness <- read_csv("../../data/happiness_2019.csv")
+names(happiness) <- make.names(names(happiness))
+happiness_mod <- lm(Score ~ GDP.per.capita, data = happiness)
+ci_98 <- confint(happiness_mod, level = 0.98)
+ci_98
+
+```
+
+
+# Problem 3
+
+Perform a hypothesis test of hypotheses
+
+$$H_0: \beta_1 = 0 \quad \text{versus}\quad H_A: \beta_1 \neq 0$$
+
+for the slope of the happiness model.  What is the test statistic, p-value, and conclusion at the 2% level?
+
+```{r}
+library(readr)
+
+happiness <- read_csv("../../data/happiness_2019.csv")
+names(happiness) <- make.names(names(happiness))
+happiness_mod <- lm(Score ~ GDP.per.capita, data = happiness)
+summary_happiness_mod <- summary(happiness_mod)
+
+test_statistic <- summary_happiness_mod$coefficients["GDP.per.capita", "t value"]
+p_value <- summary_happiness_mod$coefficients["GDP.per.capita", "Pr(>|t|)"]
+
+test_statistic
+p_value
+
+```
+
+
+# Problem 4
+
+How do the results of the hypothesis test in problem 3 relate to the results of the confidence interval in problem 2?
+
+> # Problem 4
+# Short answer: The confidence interval and hypothesis test lead to the same conclusion:
+# - If the confidence interval excludes 0, the hypothesis test rejects H0.
+# - If the confidence interval includes 0, the hypothesis test fails to reject H0.
+
+# Problem 5
+
+Which of the following conditions lead to a smaller standard error?  Briefly explain your choices.
+
+- A smaller sample size vs a larger sample size
+
+> A larger sample size leads to a smaller standard error because standard error decreases with the square root of the sample size.
+
+
+- A smaller value of $\sigma$ vs a larger value of $\sigma$
+
+> A smaller value of σ (standard deviation of residuals) leads to a smaller standard error since it directly affects the variability of the estimate.
+
+
+- Predicting closer to $\bar{x}$ vs predicting further from $\bar{x}$
+
+> Predicting closer to x̄ leads to a smaller standard error because predictions near the mean of X are more precise.
+
+
+- A smaller variance vs a larger variance in the original $X$ data
+
+> A larger variance in X leads to a smaller standard error because it provides more information for estimating the slope.
+
+
+# Problem 6
+
+Consider predicting the happiness index of a country with 1 GDP per capita.
+
+**(a)** Build a *prediction interval* for the happiness index of a new country with $x^* = 1$ GDP per capita.
+
+```{r}
+library(readr)
+
+happiness <- read_csv("../../data/happiness_2019.csv")
+names(happiness) <- make.names(names(happiness))
+happiness_mod <- lm(Score ~ GDP.per.capita, data = happiness)
+
+new_data <- data.frame(GDP.per.capita = 1)
+prediction_interval <- predict(happiness_mod, newdata = new_data, interval = "prediction", level = 0.95)
+
+prediction_interval
+
+```
+
+
+**(b)** Build a *confidence interval* for the height of the regression line at $x^* = 1$.
+
+```{r}
+library(readr)
+
+happiness <- read_csv("../../data/happiness_2019.csv")
+names(happiness) <- make.names(names(happiness))
+happiness_mod <- lm(Score ~ GDP.per.capita, data = happiness)
+
+new_data <- data.frame(GDP.per.capita = 1)
+prediction_interval <- predict(happiness_mod, newdata = new_data, interval = "prediction", level = 0.95)
+
+prediction_interval
+
+```
+
+**(c)** Explain the difference in how the prediction and confidence intervals are calculated.
+
+> A prediction interval accounts for both the uncertainty in estimating the regression line
+and the variability of individual observations. It is wider because it includes both sources of variability.
+A confidence interval only accounts for the uncertainty in estimating the mean value of the response at a given x* (e.g., x* = 1). It is narrower since it does not account for individual observation variability.
+
+
+# Problem 7
+
+The file `dc_weather.csv` contains weather data for Washington, DC from August 2018 to August 2024. 
+
+```{r}
+weather <- read_csv("../../data/dc_weather.csv")
+
+weather_mod <- lm(dew ~ tempmin, data = weather)
+```
+
+**(a)** Make a plot of minimum temperature (in C) on the x axis versus dew point on the y axis.  Comment on the shape of the data.
+
+```{r}
+library(readr)
+library(ggplot2)
+
+weather <- read_csv("../../data/dc_weather.csv")
+weather_mod <- lm(dew ~ tempmin, data = weather)
+
+ggplot(weather, aes(x = tempmin, y = dew)) +
+  geom_point() +
+  labs(
+    x = "Minimum Temperature (°C)",
+    y = "Dew Point (°C)",
+    title = "Scatterplot of Minimum Temperature vs. Dew Point"
+  ) +
+  theme_minimal()
+
+```
+
+> Comment on the shape of the data: Examine the scatterplot. Typically, the relationship between minimum temperature and dew point is expected to be approximately linear. If the data appears curved, clustered, or shows significant deviations, it might suggest non-linearity or other patterns.
+
+**(b)** Use R's `lm` to fit a linear model for dew point in terms of minimum temperature.  Perform a residual plot analysis to assess the validity of this model.
+
+```{r}
+library(readr)
+library(ggplot2)
+
+weather <- read_csv("../../data/dc_weather.csv")
+weather_mod <- lm(dew ~ tempmin, data = weather)
+
+# Residual plot
+residuals_data <- data.frame(
+  tempmin = weather$tempmin,
+  residuals = residuals(weather_mod)
+)
+
+ggplot(residuals_data, aes(x = tempmin, y = residuals)) +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(
+    x = "Minimum Temperature (°C)",
+    y = "Residuals",
+    title = "Residual Plot for Dew Point vs. Minimum Temperature"
+  ) +
+  theme_minimal()
+
+```
+
+> Response: Examine the residual plot. Ideally, the residuals should appear randomly scattered around 0 without any discernible patterns. If there is curvature, clustering, or increasing/decreasing spread, it suggests that the linear model may not be appropriate for the data.
+
+
+
+
+
+
+
+
+
+# Problem 8
+
+We want to test whether the slope of the linear relationship between minimum temperature and dew point is **greater than 1**.  Write hypotheses corresponding to the question of interest and carry out the test on the weather data.  Make a conclusion with $\alpha = 0.05$.
+
+```{r}
+library(readr)
+
+weather <- read_csv("../../data/dc_weather.csv")
+weather_mod <- lm(dew ~ tempmin, data = weather)
+
+# Extract slope coefficient and standard error
+slope <- coef(weather_mod)["tempmin"]
+se_slope <- summary(weather_mod)$coefficients["tempmin", "Std. Error"]
+
+# Test statistic for H0: slope <= 1 vs HA: slope > 1
+test_statistic <- (slope - 1) / se_slope
+
+# Calculate p-value
+p_value <- pt(test_statistic, df = df.residual(weather_mod), lower.tail = FALSE)
+
+test_statistic
+p_value
+
+```
+
+> # Hypotheses:
+# H0: Slope ≤ 1
+# HA: Slope > 1
+# Test Statistic and p-value
+test_statistic <- (slope - 1) / se_slope
+p_value <- pt(test_statistic, df = df.residual(weather_mod), lower.tail = FALSE)
+# Conclusion:
+# If p_value < 0.05, reject H0 and conclude slope > 1.
+# Otherwise, fail to reject H0.
+
+
+
+
+
+
