@@ -1,0 +1,380 @@
+---
+title: "Homework 10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE,
+                      warning = FALSE, error = TRUE,
+                      fig.height = 3)
+library(tidyverse)
+source("../../scripts/ggprob.R")
+```
+
+# Preliminaries
+
+- This file should be in `STAT240/homework/hw10` on your local computer.
+- Download `superbowl_commercials.csv` to `STAT240/data`.
+
+
+# Disclaimer
+
+Many of these problems ask you to consider some **true proportion.** We have data on every commercial these brands have aired in Super Bowls in this time period, so the notion of a 'population' or 'true parameter' here is about a theoretical set of all advertisements that could have been created for Super Bowls, or if you prefer, about the probabilistic decision-making process that companies have to make behind the scenes (like the chimpanzee prosocial choices).
+
+Statistical inference often requires us to consider unintuitive, theoretical populations like this. Understanding of this point is not required for doing the computations we request below, but is important to always keep in mind when conducting inference.
+
+# Problem 1
+
+The file `superbowl_commercials.csv` contains a list of advertisements for 10 brands aired during Super Bowls from 2000 to 2020.  Each advertisement is classified according to several characterisitcs.  More information can be found  [here](https://github.com/fivethirtyeight/superbowl-ads).
+
+Transform the data as follows:
+
+- Group the rows by brand
+- Count the number of ads described as "Funny"
+- Count the total number of ads
+- Find the proportion of "Funny" ads for each brand
+- Print the dataset
+
+```{r}
+commercials <- read_csv("../../data/superbowl_commercials.csv")
+```
+
+```{r}
+commercials <- read_csv("../../data/superbowl_commercials.csv")
+
+head(commercials)
+
+funny_proportions <- commercials %>%
+ 
+  group_by(Brand) %>% 
+  summarize(
+    funny_ads = sum(Funny == TRUE),  
+    total_ads = n(),
+    proportion_funny = funny_ads / total_ads
+  ) %>%
+  arrange(desc(proportion_funny))
+
+
+print(funny_proportions)
+```
+
+
+# Problem 2
+
+Count the total number of ads in the dataset, as well as the total number of "Funny" ads.  Build and interpret a 99% CI for $p_{funny}$, the overall proportion of funny ads across all of the brands.  Use the Agresti-Coull adjustment.
+
+```{r}
+total_ads <- nrow(commercials)
+funny_ads <- sum(commercials$Funny == TRUE)
+
+p_hat <- funny_ads / total_ads
+
+z <- 2.576  
+n_tilde <- total_ads + z^2
+p_tilde <- (funny_ads + (z^2/2))/n_tilde
+
+se <- sqrt((p_tilde * (1 - p_tilde))/n_tilde)
+
+ci_lower <- p_tilde - z * se
+ci_upper <- p_tilde + z * se
+
+cat("Total ads:", total_ads, "\n")
+cat("Funny ads:", funny_ads, "\n")
+cat("Adjusted proportion:", round(p_tilde, 3), "\n")
+cat("99% CI: (", round(ci_lower, 3), ",", round(ci_upper, 3), ")\n")
+```
+
+>Total ads: `r total_ads`
+Funny ads: `r funny_ads`
+99% Confidence Interval for p_funny: (`r round(ci_lower, 3)`, `r round(ci_upper, 3)`)
+Interpretation: We are 99% confident that the true proportion of funny ads falls within this range.
+
+
+# Problem 3
+
+Repeat the analysis in problem 2, but build a 99% CI fo for $p_{funny}$ with the Wald adjustment.  How do the two intervals compare?
+
+```{r}
+total_ads <- nrow(commercials)
+funny_ads <- sum(commercials$Funny == TRUE)
+
+p_hat <- funny_ads / total_ads
+
+z <- 2.576
+se_wald <- sqrt((p_hat * (1 - p_hat))/total_ads)
+
+ci_lower_wald <- p_hat - z * se_wald
+ci_upper_wald <- p_hat + z * se_wald
+
+cat("Total ads:", total_ads, "\n")
+cat("Funny ads:", funny_ads, "\n")
+cat("Observed proportion:", round(p_hat, 3), "\n")
+cat("99% Wald CI: (", round(ci_lower_wald, 3), ",", round(ci_upper_wald, 3), ")\n")
+
+n_tilde <- total_ads + z^2
+p_tilde <- (funny_ads + (z^2/2))/n_tilde
+se_ac <- sqrt((p_tilde * (1 - p_tilde))/n_tilde)
+ci_lower_ac <- p_tilde - z * se_ac
+ci_upper_ac <- p_tilde + z * se_ac
+
+cat("\nComparison with Agresti-Coull CI:", "\n")
+cat("99% Agresti-Coull CI: (", round(ci_lower_ac, 3), ",", round(ci_upper_ac, 3), ")\n")
+```
+
+> Total ads: `r total_ads`
+Funny ads: `r funny_ads`
+Observed proportion: `r round(p_hat, 3)`
+99% Wald CI: (`r round(ci_lower_wald, 3)`, `r round(ci_upper_wald, 3)`)
+99% Agresti-Coull CI: (`r round(ci_lower_ac, 3)`, `r round(ci_upper_ac, 3)`)
+Comparison:The Agresti-Coull interval is slightly wider, which accounts for small sample adjustments and is generally more robust.
+The Wald interval is narrower but can be unreliable, especially for proportions near 0 or 1 or small sample sizes.
+
+
+
+# Problem 4
+
+Perform a hypothesis test to determine whether more than half of superbowl ads are funny.  Use hypotheses
+$$H_0: p_{funny} = 0.5 \quad \text{versus}\quad H_A: p_{funny} > 0.5$$
+and $\alpha = 0.01$.  Interpret your result in context.
+
+**Please PRINT OUT YOUR p-value.**
+
+```{r}
+total_ads <- nrow(commercials)
+funny_ads <- sum(commercials$Funny == TRUE)
+p_hat <- funny_ads / total_ads
+p_null <- 0.5 
+
+se <- sqrt(p_null * (1 - p_null) / total_ads)
+
+z_stat <- (p_hat - p_null) / se
+
+p_value <- 1 - pnorm(z_stat)
+
+cat("Sample size:", total_ads, "\n")
+cat("Number of funny ads:", funny_ads, "\n")
+cat("Sample proportion:", round(p_hat, 3), "\n")
+cat("Z-statistic:", round(z_stat, 3), "\n")
+cat("P-value:", round(p_value, 4), "\n")
+
+cat("\nAt α = 0.01, we", if(p_value < 0.01) "reject" else "fail to reject", "the null hypothesis.")
+```
+
+> Sample size: `r total_ads`
+Number of funny ads: `r funny_ads`
+Sample proportion: `r round(p_hat, 3)`
+Z-statistic: `r round(z_stat, 3)`
+P-value: `r round(p_value, 4)`
+Decision:
+At α = 0.01, if p-value < 0.01, we reject H0. This suggests there is evidence that more than half of Super Bowl ads are funny.
+If p-value ≥ 0.01, we fail to reject H0. This suggests there is insufficient evidence to conclude that more than half of Super Bowl ads are funny.
+
+
+# Problem 5
+
+State the model and assumptions you used to perform inference on $p_{funny}$ in problems 2-4.  State one criticism where reality may differ from the assumptions, potentially leading to misleading conclusions.
+
+>#-The data is assumed to represent a random sample of Super Bowl ads.
+- Each ad's classification as "Funny" or not is independent of others.
+- The true proportion of "Funny" ads remains constant across the time period.
+- The sample size is sufficiently large to use a normal approximation for the binomial distribution.
+
+
+> # - The dataset includes all ads from 2000 to 2020, so it is not a random sample.
+- Advertising strategies, audience preferences, or cultural trends may have changed over time, violating the assumption of a constant true proportion.
+- If specific brands dominate the data, the results may not reflect the broader "population" of potential Super Bowl ads, introducing bias.
+# Problem 6
+
+Now, focus on $p_{H, funny}$, which is the proportion of Hyundai ads that are funny.  Perform a **two-sided** hypothesis test to determine whether or not half of all Hyundai ads are funny. 
+
+**Please EXPLICITLY STATE your hypotheses, test statistic, null distribution, p-value, and conclusion.**
+
+```{r}
+library(dplyr)
+
+hyundai_ads <- commercials %>% 
+  filter(tolower(Brand) == "hyundai")  
+
+total_hyundai_ads <- nrow(hyundai_ads)
+funny_hyundai_ads <- sum(hyundai_ads$Funny)  
+
+p_hat_hyundai <- funny_hyundai_ads / total_hyundai_ads
+p_null <- 0.5  
+
+se_null <- sqrt(p_null * (1 - p_null) / total_hyundai_ads)
+
+z_stat <- (p_hat_hyundai - p_null) / se_null
+
+p_value <- 2 * (1 - pnorm(abs(z_stat)))
+
+cat("Hypotheses:\n")
+cat("H0: p_H,funny = 0.5 (Half of Hyundai ads are funny)\n")
+cat("HA: p_H,funny ≠ 0.5 (The proportion of funny Hyundai ads is not half)\n\n")
+cat("Sample proportion:", round(p_hat_hyundai, 4), "\n")
+cat("Test statistic (z):", round(z_stat, 4), "\n")
+cat("Null distribution: Standard normal (Z distribution)\n")
+cat("p-value:", round(p_value, 4), "\n\n")
+
+alpha <- 0.05
+if (p_value < alpha) {
+  cat("Conclusion: With α =", alpha, ", reject H0. There is sufficient evidence to conclude that\n",
+      "the proportion of funny Hyundai ads is different from 0.5 (p-value =", round(p_value, 4), ").\n")
+} else {
+  cat("Conclusion: With α =", alpha, ", fail to reject H0. There is insufficient evidence to conclude that\n",
+      "the proportion of funny Hyundai ads is different from 0.5 (p-value =", round(p_value, 4), ").\n")
+}
+
+
+```
+
+>Hypotheses:
+H0: p_H,funny = 0.5 (Half of Hyundai ads are funny)
+HA: p_H,funny ≠ 0.5 (The proportion of funny Hyundai ads is not half)
+Test statistic (z): `r round(z_stat, 4)`
+Null distribution: Standard normal (Z distribution)
+p-value: `r round(p_value, 4)`
+Conclusion:
+- If p-value < 0.05, reject H0: There is evidence that the proportion of funny Hyundai ads is different from 0.5.
+- If p-value >= 0.05, fail to reject H0: There is insufficient evidence to conclude that the proportion of funny Hyundai ads is different from 0.5.
+
+
+# Problem 7
+
+Consider comparing the proportion of Hyundai ads that are funny to the proportion of Budweiser ads that are funny.  Build a 95% confidence interval on the difference in proportions and use the Agresti-Coffe adjustment.  Interpret your results in context.
+
+```{r}
+library(dplyr)
+hyundai_ads <- commercials %>% 
+  filter(tolower(Brand) == "hyundai") 
+
+budweiser_ads <- commercials %>% 
+  filter(tolower(Brand) == "budweiser")
+
+total_hyundai_ads <- nrow(hyundai_ads)
+funny_hyundai_ads <- sum(hyundai_ads$Funny, na.rm = TRUE) 
+
+total_budweiser_ads <- nrow(budweiser_ads)
+funny_budweiser_ads <- sum(budweiser_ads$Funny, na.rm = TRUE)
+
+alpha <- 0.05
+z <- qnorm(1 - alpha/2)
+
+n1_adj <- total_hyundai_ads + 2
+n2_adj <- total_budweiser_ads + 2
+p1_adj <- (funny_hyundai_ads + 1) / n1_adj  
+p2_adj <- (funny_budweiser_ads + 1) / n2_adj 
+
+
+diff_p <- p1_adj - p2_adj
+
+
+se_diff <- sqrt((p1_adj * (1 - p1_adj) / n1_adj) + 
+                (p2_adj * (1 - p2_adj) / n2_adj))
+
+
+ci_lower <- diff_p - z * se_diff
+ci_upper <- diff_p + z * se_diff
+
+
+cat("Sample sizes:\n")
+cat("Hyundai ads:", total_hyundai_ads, "\n")
+cat("Budweiser ads:", total_budweiser_ads, "\n\n")
+
+cat("Adjusted proportions:\n")
+cat("Hyundai funny proportion:", round(p1_adj, 4), "\n")
+cat("Budweiser funny proportion:", round(p2_adj, 4), "\n\n")
+
+cat("95% Confidence Interval for difference in proportions (Hyundai - Budweiser):\n")
+cat("[", round(ci_lower, 4), ",", round(ci_upper, 4), "]\n\n")
+
+cat("Interpretation: ")
+if (ci_lower > 0) {
+  cat("We are 95% confident that the proportion of funny Hyundai ads is between",
+      round(ci_lower, 4), "and", round(ci_upper, 4), "higher than the proportion",
+      "of funny Budweiser ads.\n")
+} else if (ci_upper < 0) {
+  cat("We are 95% confident that the proportion of funny Hyundai ads is between",
+      abs(round(ci_upper, 4)), "and", abs(round(ci_lower, 4)), "lower than the proportion",
+      "of funny Budweiser ads.\n")
+} else {
+  cat("We cannot conclude there is a significant difference in the proportion of funny ads",
+      "between Hyundai and Budweiser, as the confidence interval contains 0.\n")
+}
+
+```
+
+> 95% Confidence Interval for the difference in proportions of funny ads between Hyundai and Budweiser:
+# [ `r round(ci_lower, 4)`, `r round(ci_upper, 4)` ]
+Interpretation:
+- If the interval is entirely above 0, Hyundai ads are more likely to be funny than Budweiser ads.
+- If the interval is entirely below 0, Budweiser ads are more likely to be funny than Hyundai ads.
+- If the interval includes 0, there is no significant difference in the proportions of funny ads between Hyundai and Budweiser.
+
+
+# Problem 8
+
+Perform a hypothesis test to determine whether a *different* proportion of Hyndai ads than Budweiser ads are funny.  Write appropriate two-sided hypotheses and draw a conclusion with $\alpha = 0.05$.
+
+**Please EXPLICITLY STATE your hypotheses, p-value, and conclusion.** No need to state the test statistic or null distribution.
+
+```{r}
+library(dplyr)
+
+hyundai_ads <- commercials %>% 
+  filter(tolower(Brand) == "hyundai")
+
+budweiser_ads <- commercials %>% 
+  filter(tolower(Brand) == "budweiser")
+
+total_hyundai_ads <- nrow(hyundai_ads)
+funny_hyundai_ads <- sum(hyundai_ads$Funny, na.rm = TRUE)  # Assuming column is called "Funny"
+
+total_budweiser_ads <- nrow(budweiser_ads)
+funny_budweiser_ads <- sum(budweiser_ads$Funny, na.rm = TRUE)
+
+p1 <- funny_hyundai_ads / total_hyundai_ads
+p2 <- funny_budweiser_ads / total_budweiser_ads
+
+p_pooled <- (funny_hyundai_ads + funny_budweiser_ads) / (total_hyundai_ads + total_budweiser_ads)
+
+se_pooled <- sqrt(p_pooled * (1 - p_pooled) * (1/total_hyundai_ads + 1/total_budweiser_ads))
+
+z_diff <- (p1 - p2) / se_pooled
+
+p_value <- 2 * (1 - pnorm(abs(z_diff)))
+
+cat("Sample sizes:\n")
+cat("Hyundai ads:", total_hyundai_ads, "\n")
+cat("Budweiser ads:", total_budweiser_ads, "\n\n")
+
+cat("Sample proportions:\n")
+cat("Hyundai funny proportion:", round(p1, 4), "\n")
+cat("Budweiser funny proportion:", round(p2, 4), "\n\n")
+
+cat("Hypotheses:\n")
+cat("H0: p_H,funny = p_B,funny (The proportion of funny ads is the same for Hyundai and Budweiser)\n")
+cat("HA: p_H,funny ≠ p_B,funny (The proportion of funny ads is different for Hyundai and Budweiser)\n\n")
+
+cat("Test statistic (z):", round(z_diff, 4), "\n")
+cat("p-value:", round(p_value, 4), "\n\n")
+
+alpha <- 0.05
+if (p_value < alpha) {
+  cat("Conclusion: With α =", alpha, ", reject H0. There is sufficient evidence that the proportion\n",
+      "of funny ads differs between Hyundai and Budweiser (p-value =", round(p_value, 4), ").\n")
+} else {
+  cat("Conclusion: With α =", alpha, ", fail to reject H0. There is insufficient evidence to conclude\n",
+      "that the proportions of funny ads are different between Hyundai and Budweiser (p-value =", 
+      round(p_value, 4), ").\n")
+}
+```
+
+>Hypotheses:
+H0: p_H,funny = p_B,funny (The proportion of funny ads is the same for Hyundai and Budweiser)
+HA: p_H,funny ≠ p_B,funny (The proportion of funny ads is different for Hyundai and Budweiser)
+p-value: `r round(p_value, 4)`
+Conclusion:
+- If p-value < 0.05, reject H0: There is evidence that the proportion of funny ads differs between Hyundai and Budweiser.
+- If p-value >= 0.05, fail to reject H0: There is insufficient evidence to conclude that the proportions of funny ads are different between Hyundai and Budweiser.
+
+
