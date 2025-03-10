@@ -1,0 +1,241 @@
+---
+title: "Discussion 7"
+output: html_document
+---
+
+# Preliminaries
+
+- This file should be in `STAT240/discussion/ds07` and the script `ggprob.R` should be in `STAT240/scripts` on your local computer.
+
+- This assignment should be completed in your **assigned Canvas groups**. Only one person has to submit on behalf of the group. You may submit whatever you have at the end of discussion section for full credit.
+
+# Present Group Members
+
+Please **write the names of the present group members** here.
+
+> Present Group Members: Jenny Kim, Avery Dunham, Vibha Nair
+
+> Absent Group Members: Rowan Tichelaar 
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      error = TRUE, 
+                      warning = FALSE, 
+                      message = FALSE)
+library(tidyverse)
+source("../../scripts/ggprob.R")
+```
+
+
+
+# Problem 1
+
+For each scenario, explain why the random variable will or will not have a binomial distribution. If not, cite the specific BINS assumption(s) that are not met.
+
+1. A bucket contains 10 colored tokens with five that are red and five that are blue. Four tokens are drawn at random from the bucket one at a time, but without replacing the tokens drawn. $X_1$ is the number of red tokens selected.
+
+> The random variable  $X_1$  does not have a binomial distribution because the trials are not independent (tokens are drawn without replacement), and the probability of success (drawing a red token) is not constant.
+
+2. A fair coin is tossed repeatedly until the tenth head is tossed. $X_2$ is the number of tails tossed prior to the tenth head.
+
+> The random variable $X_2$ does not have a binomial distribution because the number of trials is not fixed. The process continues until the 10th head is tossed, which violates the fixed number of trials assumption.
+
+3. Four buckets each contain a total of five tokens each, some red and some blue. The number of red tokens in the buckets are 1, 2, 3, and 4 with blue tokens making up the remainder. One token is drawn at random from each bucket. $X_3$ is the total number of red tokens drawn.
+
+> The random variable $X_3$ does have a binomial distribution because there are fixed, independent trials, each with a constant probability of success (drawing a red token from each bucket). All BINS conditions are satisfied.
+
+# Problem 2
+
+For $X \sim \text{Binomial}(15,0.2)$ 
+
+- Part a: Calculate the mean, variance and standard deviation of $X$.
+
+```{r}
+n <- 15
+p <- 0.2
+
+mean_X <- n * p
+
+variance_X <- n * p * (1 - p)
+
+std_dev_X <- sqrt(variance_X)
+
+mean_X
+variance_X
+std_dev_X
+
+```
+
+- Part b: Calculate the probability of an outcome greater than or equal to 4. List all the ways you can find this probability.
+
+```{r}
+n <- 15
+p <- 0.2
+
+prob_X_greater_equal_4 <- 1 - pbinom(3, size = n, prob = p)
+
+prob_X_greater_equal_4
+
+```
+
+# Problem 3
+
+Let $X_1$ and $X_2$ be two draws from $X \sim N(0,1)$. Order the five events below based on which events are least to most likely to occur.
+
+Event A: $X_1 < X_2$    
+Event B: $X_1 = \mu$    
+Event C: $\mu - \sigma < X_2 < \mu + \sigma$    
+Event D: $X_1 > 1.5$ AND $X_2 > 1.5$
+
+>EventB, EventD, EventA, EventC
+
+# Problem 4
+
+Create a data frame with columns `n`, `p`, `x`, `mu`, and `prob` where:
+
+-   `n` varies from 2 to 100 by twos (so each `n` value is even);
+-   `p` equals 0.5;
+-   `x` is $n/2$;
+-   `mu` is the mean of the distribution;
+-   `prob` is $P(X = x)$
+
+Show the first few rows using `head()`.
+
+```{r}
+n_values <- seq(2, 100, by = 2)  
+p <- 0.5  
+x_values <- n_values / 2  
+mu_values <- n_values * p 
+
+prob_values <- dbinom(x_values, size = n_values, prob = p)
+
+df <- data.frame(n = n_values, p = p, x = x_values, mu = mu_values, prob = prob_values)
+
+head(df)
+
+```
+
+**Part a** What is the relationship between `x` and `mu`?
+
+>The relationship between x and mu is that x is exactly equal to mu. This is becuase x=n/2 and u=np, with p=0.5, so u=n/2, making x=u. 
+
+**Part b** Make a line graph of `prob` versus `n`.
+
+```{r}
+library(ggplot2)
+
+ggplot(df, aes(x = n, y = prob)) +
+  geom_line() +
+  labs(title = "Probability vs. n", x = "n", y = "Probability (P(X = x))")
+
+```
+
+**Part c** Describe the pattern: how does the probability that a random variable is equal to the mean change as $n$ increases?
+
+> As n increases, the probability P(X=u) decreases because the distribution spreads out.
+# Problem 5 
+
+Find the probabilities of the area shaded in the graph below for $\text{Normal}(2.8, 6)$.
+
+*Make sure you have run `source("../../scripts/ggprob.R")`  at the top of this file! If you get the error `cannot open file '../../scripts/ggprob.R': No such file or directory`, reset your working directory with `Session > Set Working Directory > To Source File Location`.*
+
+
+1. Don't change the R chunk below
+
+```{r}
+gnorm(2.8, 6) +
+  geom_norm_fill(2.8, 6, a = 1.5, b = 4, fill = "red") +
+  geom_vline(xintercept = 1.5) +
+  geom_vline(xintercept = 4) +
+  annotate("text", x = -1.5, y = .07, label = "x = 1.5") +
+  annotate("text", x = 6.5, y = .07, label = "x = 4")
+```
+
+```{r}
+mu <- 2.8
+sigma <- 6
+
+prob_4 <- pnorm(4, mean = mu, sd = sigma)
+prob_1.5 <- pnorm(1.5, mean = mu, sd = sigma)
+
+prob_shaded <- prob_4 - prob_1.5
+
+prob_shaded
+
+```
+
+2. Don't change the R chunk below
+
+```{r}
+gnorm(2.8, 6) +
+  geom_norm_fill(2.8, 6, a = -2, b = 25, fill = "red") +
+  geom_vline(xintercept = -2) +
+  annotate("text", x = 1.5, y = .07, label = "x = -2") 
+```
+
+```{r}
+mu <- 2.8
+sigma <- 6
+prob_25 <- pnorm(25, mean = mu, sd = sigma)
+prob_neg_2 <- pnorm(-2, mean = mu, sd = sigma)
+
+prob_shaded <- prob_25 - prob_neg_2
+
+prob_shaded
+
+```
+
+3. Don't change the R chunk below
+
+```{r}
+mu = 2.8
+sigma = 6
+gnorm(2.8, 6) +
+  geom_norm_fill(2.8, 6, a = mu-2*sigma, b =  mu+2*sigma, fill = "red") +
+  geom_vline(xintercept =  mu-2*sigma) +
+  geom_vline(xintercept =  mu+2*sigma) +
+  annotate("text", x = 0.7, y = .07, label = "2 standard deviation") +
+  scale_x_continuous(breaks = c(mu-3*sigma, mu-2*sigma, mu-sigma, mu, mu+sigma,mu+2*sigma, mu+3*sigma))
+```
+
+```{r}
+mu <- 2.8
+sigma <- 6
+
+prob_upper <- pnorm(mu + 2 * sigma, mean = mu, sd = sigma)
+prob_lower <- pnorm(mu - 2 * sigma, mean = mu, sd = sigma)
+
+prob_within_2sd <- prob_upper - prob_lower
+
+prob_within_2sd
+
+```
+
+
+# Problem 6
+
+It is known that for Normal distributions, about 68% of the data will fall within one standard deviation, about 95% within two standard deviations, and about 99.7% within three standard deviations from the mean. 
+
+Calculate these probabilities for $\text{Normal}(0,1)$ and display all three values.
+
+```{r}
+mu <- 0
+sigma <- 1
+
+prob_1sd <- pnorm(mu + sigma, mean = mu, sd = sigma) - pnorm(mu - sigma, mean = mu, sd = sigma)
+prob_2sd <- pnorm(mu + 2 * sigma, mean = mu, sd = sigma) - pnorm(mu - 2 * sigma, mean = mu, sd = sigma)
+prob_3sd <- pnorm(mu + 3 * sigma, mean = mu, sd = sigma) - pnorm(mu - 3 * sigma, mean = mu, sd = sigma)
+
+prob_1sd
+prob_2sd
+prob_3sd
+
+```
+
+
+
+
+
+
